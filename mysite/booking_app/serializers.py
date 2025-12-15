@@ -4,6 +4,46 @@ from rest_framework.fields import DateField
 from .models import (
     UserProfile, City, Service, Hotel, HotelImage, Room, RoomImage, Booking, Review, Country
 )
+from rest_framework_simplejwt.tokens import RefreshToken
+
+
+
+class UserProfileRegisterSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = UserProfile
+        fields = ('username', 'email', 'password',
+                  'age', 'phone_number', )
+        extra_kwargs = {'password': {'write_only': True}}
+
+    def create(self, validated_data):
+        user = UserProfile.objects.create_user(**validated_data)
+        return user
+
+
+class LoginSerializer(serializers.Serializer):
+    username = serializers.CharField()
+    password = serializers.CharField(write_only=True)
+
+    def validate(self, data):
+        user = authenticate(**data)
+        if user and user.is_active:
+            return user
+        raise serializers.ValidationError("Неверные учетные данные")
+
+    def to_representation(self, instance):
+        refresh = RefreshToken.for_user(instance)
+        return {
+            'user': {
+                'username': instance.username,
+                'email': instance.email,
+            },
+            'access': str(refresh.access_token),
+            'refresh': str(refresh),
+        }
+
+
+
+
 
 class UserProfileListSerializer(serializers.ModelSerializer):
     class Meta:
@@ -109,13 +149,17 @@ class BookingSerializer(serializers.ModelSerializer):
         model = Booking
         fields = ('__all__')
 
-
+class ReviewCreateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Review
+        fields = ['stars', 'text', 'user', 'hotel']
 
 class ReviewSerializer(serializers.ModelSerializer):
+    created_date = serializers.DateTimeField(format='%d.%m.%Y %H:%M')
     user = UserProfileReviewSerializer(read_only=True)
     class Meta:
         model = Review
-        fields = ('id', 'user', 'text')
+        fields = ('id', 'user', 'text','created_date')
 
 class HotelDetailSerializer(serializers.ModelSerializer):
     hotel_images = HotelImageSerializer(many=True, read_only=True)
@@ -137,3 +181,8 @@ class HotelDetailSerializer(serializers.ModelSerializer):
         return obj.get_avg_rating()
     def get_count_people(self,obj):
         return obj.get_count_people()
+
+class HotelCreateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Hotel
+        fields = ('__all__')

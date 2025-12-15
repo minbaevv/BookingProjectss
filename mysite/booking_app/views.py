@@ -1,5 +1,5 @@
 from django.shortcuts import render
-from rest_framework import viewsets, generics
+from rest_framework import viewsets, generics,status
 from .pagination import *
 from .models import *
 from django_filters import rest_framework as filters
@@ -8,11 +8,48 @@ from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.filters import SearchFilter, OrderingFilter
 from .serializers import (
     UserProfileListSerializer,UserProfileDetailSerializer, CityListSerializer,CityDetailSerializer,
-    Hotel, Room, BookingSerializer, ReviewSerializer,
+    Hotel, Room, BookingSerializer,ReviewCreateSerializer,
     HotelListSerializer,HotelDetailSerializer,
-    RoomSerializer,
+    RoomSerializer,HotelCreateSerializer,UserProfileRegisterSerializer,LoginSerializer
 )
-from .permissions import IsClientForBooking,IsOwnerForHotel
+from .permissions import IsClientForBooking,CreateHotelPermissions
+from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework_simplejwt.views import TokenObtainPairView
+from rest_framework.response import Response
+
+class RegisterView(generics.CreateAPIView):
+    serializer_class = UserProfileRegisterSerializer
+
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        user = serializer.save()
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+
+class LoginView(TokenObtainPairView):
+    serializer_class = LoginSerializer
+
+    def post(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        try:
+            serializer.is_valid(raise_exception=True)
+        except Exception:
+            return Response({"detail": "Неверные учетные данные"}, status=status.HTTP_401_UNAUTHORIZED)
+
+        user = serializer.validated_data
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+class LogoutView(generics.GenericAPIView):
+    def post(self, request, *args, **kwargs):
+        try:
+            refresh_token = request.data["refresh"]
+            token = RefreshToken(refresh_token)
+            token.blacklist()
+            return Response(status=status.HTTP_205_RESET_CONTENT)
+        except Exception:
+            return Response(status=status.HTTP_400_BAD_REQUEST)
 
 
 class UserProfileListAPIView(generics.ListAPIView):
@@ -45,12 +82,13 @@ class HotelListAPIView(generics.ListAPIView):
     filterset_class = HotelFilter
     search_fields = ["hotel_name"]
     ordering_fields = ["hotel_stars"]
-    permission_classes = [IsOwnerForHotel]
+
+
 
 class HotelDetailAPIView(generics.RetrieveAPIView):
     queryset = Hotel.objects.all()
     serializer_class = HotelDetailSerializer
-    permission_classes = [IsOwnerForHotel]
+
 
 
 class RoomViewSet(viewsets.ModelViewSet):
@@ -71,7 +109,22 @@ class BookingViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         return Booking.objects.filter(user=self.request.user)
 
-class ReviewViewSet(viewsets.ModelViewSet):
+class ReviewCreateAPIView(generics.CreateAPIView):
     queryset = Review.objects.all()
-    serializer_class = ReviewSerializer
+    serializer_class = ReviewCreateSerializer
     permission_classes = [IsClientForBooking]
+
+class ReviewEditAPIView(generics.RetrieveUpdateDestroyAPIView):
+    queryset = Review.objects.all()
+    serializer_class = ReviewCreateSerializer
+    permission_classes = [IsClientForBooking]
+
+    def get_queryset(self):
+        return Review.objects.filter(user=self.request.user)
+
+class HotelViewSet(viewsets.ModelViewSet):
+    queryset = Hotel.objects.all()
+    serializer_class = HotelCreateSerializer
+    permissions_classes = [CreateHotelPermissions]
+    def get_queryset(self):
+        return Hotel.objects.filter(owner=self.request.user)

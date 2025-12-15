@@ -62,7 +62,7 @@ class ProductAdmin(TranslationAdmin):
             'screen': ('modeltranslation/css/tabbed_translation_fields.css',),
         }
 
-
+admin.site.register(UserProfile)
 admin.site.register(Booking)
 admin.site.register(Service)
 
