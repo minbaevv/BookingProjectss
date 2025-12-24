@@ -3,18 +3,13 @@ from django.contrib.auth.models import AbstractUser
 from django.core.validators import MinValueValidator, MaxValueValidator
 from phonenumber_field.modelfields import PhoneNumberField
 
-class Country(models.Model):
-    country_image = models.ImageField(upload_to='country_images/')
-    country_name = models.CharField(max_length=30, unique=True)
 
-    def __str__(self):
-        return self.country_name
+
 
 class UserProfile(AbstractUser):
     age = models.PositiveSmallIntegerField(validators=[MinValueValidator(18), MaxValueValidator(80)],null=True,blank=True)
     phone_number = PhoneNumberField(null=True,blank=True)
     photo = models.ImageField(upload_to='user_images', null=True, blank=True)
-    country = models.ForeignKey(Country, on_delete=models.CASCADE, null=True, blank=True)
     ROLE_CHOICES = (
     ('client', 'client'),
     ('owner', 'owner'))
@@ -27,11 +22,10 @@ class UserProfile(AbstractUser):
 class City(models.Model):
     city_image = models.ImageField(upload_to='city_images')
     city_name = models.CharField(max_length=30)
-    country = models.ForeignKey(Country, on_delete=models.CASCADE)
+
 
     def __str__(self):
-        return f'{self.city_name}, {self.country}'
-
+        return f'{self.city_name}'
 
 class Service(models.Model):
     service_image = models.ImageField(upload_to='service_images')
@@ -45,7 +39,6 @@ class Hotel(models.Model):
     street = models.CharField(max_length=100)
     postal_code = models.PositiveIntegerField(unique=True, verbose_name="Почта номери")
     city = models.ForeignKey(City, on_delete=models.CASCADE, related_name='hotels')
-    country = models.ForeignKey(Country, on_delete=models.CASCADE)
     stars = models.PositiveIntegerField(choices=[(i, str(i))for i in range(1, 6)])
     hotel_video = models.FileField(upload_to='hotel_videos')
     description = models.TextField()

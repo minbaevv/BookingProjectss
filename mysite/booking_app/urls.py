@@ -2,7 +2,7 @@ from rest_framework import routers
 from .views import (
     UserProfileListAPIView, UserProfileDetailAPIView,
     CityListAPIView, CityDetailAPIView, HotelListAPIView, HotelDetailAPIView, RoomViewSet, BookingViewSet,
-    ReviewCreateSerializer, ReviewCreateAPIView, ReviewEditAPIView, HotelViewSet, RegisterView, LoginView, LogoutView
+        ReviewCreateSerializer, ReviewCreateAPIView, ReviewEditAPIView, HotelViewSet, RegisterView, LoginView, LogoutView
 
 )
 from django.urls import path, include
